@@ -1,0 +1,865 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/WanThinnn/Cyberfortress-n8n-Template/contents/templates/smartxdr-iris-report-template.md",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -656,
+        2688
+      ],
+      "id": "49954895-b562-40b0-92e5-0e6eaed21bdd",
+      "name": "Retrieve DOCX template",
+      "credentials": {
+        "githubApi": {
+          "id": "a69kXnEJA6XBtIQc",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2144,
+        1376
+      ],
+      "id": "1ca59caf-e2df-4a81-96c4-5d0b5262a968",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "=pandoc /files/temp_report_{{ $items(\"Merge2\")[0].json.case_id }}.md \\\n-f markdown \\\n-t docx \\\n--reference-doc=/files/style_reference.docx \\\n-o /files/SmartXDR-Case-{{ $items(\"Merge2\")[0].json.case_id }}-Report_{{ $now.format(\"yyyyMMdd_HHmmss\") }}.docx"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        1824
+      ],
+      "id": "36dbeab1-6144-43c0-b764-2d4fefab5baf",
+      "name": "Run Pandoc Command",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/files/SmartXDR-Case-{{ $items(\"Merge2\")[0].json.case_id }}-Report_{{ $now.format(\"yyyyMMdd_HHmmss\") }}.docx"
+      },
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1824
+      ],
+      "id": "977e08ff-bdd6-4cf8-b555-218e02b710ea",
+      "name": "Read DOCX Output"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/files/temp_report_{{ $items(\"Merge2\")[0].json.case_id }}.md",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        2096
+      ],
+      "id": "93ba81ed-3763-4e09-9ade-b60281596a4c",
+      "name": "Write MD to Disk"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "markdown",
+        "options": {
+          "encoding": "utf8",
+          "fileName": "=temp_report_{{ $json.case_id }}.md"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        2096
+      ],
+      "id": "8157c42a-41a1-4347-9e0d-f68d07423ccb",
+      "name": "Convert MD to Binary"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "-1003309653485",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "=SmartXDR Report Successfully Generated for **Case {{ $items(\"Merge2\")[0].json.case_id }}**!\n\n{{ $json.webUrl }}",
+          "fileName": "=SmartXDR-Report_{{$now.setZone(\"Asia/Ho_Chi_Minh\").format(\"yyyyLLdd_HHmmss\")}}.docx"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2928,
+        1712
+      ],
+      "id": "c6ad9249-7e9d-4783-bd25-30a8591fa95b",
+      "name": "Send a document",
+      "webhookId": "9c706ffe-f644-455c-8fe5-fa33b8337244",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2672,
+        1632
+      ],
+      "id": "cf2e9477-c100-4a1b-a66e-cd89ac05efa0",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const caseId = items[0].json.case_id;\nconst iocs = items[0].json.iocs;\n\nconst output = [];\n\n// Item đầu tiên có case_id\noutput.push({\n    json: {\n        case_id: caseId,\n        ioc: iocs[0]\n    }\n});\n\n// Các item sau KHÔNG có case_id\nfor (let i = 1; i < iocs.length; i++) {\n    output.push({\n        json: {\n            ioc: iocs[i]\n        }\n    });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        2160
+      ],
+      "id": "68e53f53-2936-402f-a910-ad2c722d2af5",
+      "name": "Extract IOCs"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "46cb68af-c3b7-4c17-b222-63763d17dd2a",
+              "leftValue": "={{ $json.ioc.smartxdr_comment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "18322fb7-5ed1-45ef-90e6-704d20de79f6",
+              "leftValue": "={{ $json.ioc.smartxdr_comment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        2160
+      ],
+      "id": "ecf2324b-48f5-42df-a9a4-989f192a99a0",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * n8n Code Node: Generate IOC Report from Markdown Template\n * \n * WORKFLOW SETUP:\n * [Retrieve template] → [Extract from File] → [Merge with IOC data] → [This Code Node]\n * \n * Input requirements:\n * - Node \"Extract from File\" phải convert binary template thành text\n * - Input items phải chứa ioc objects với optional smartxdr_comment\n */\n\n// --- BƯỚC 1: LẤY NỘI DUNG TEMPLATE ---\n// Đọc từ node \"Extract from File\" đã convert binary sang text\nconst templateRaw = $('Extract from File').first().json.data;\n\nif (!templateRaw || templateRaw.length === 0) {\n    throw new Error(\"Không tìm thấy nội dung template. Kiểm tra node 'Extract from File' đã được cấu hình đúng.\");\n}\n\nconsole.log('Template loaded, length:', templateRaw.length);\n\n// --- BƯỚC 2: CHUẨN BỊ DỮ LIỆU ---\nconst allItems = items.map(item => item.json);\nconst caseId = allItems[0].case_id || \"N/A\";\nconst now = new Date().toISOString().split('T')[0];\n\n// Trích xuất danh sách IOC\nconst iocList = allItems.map(item => item.ioc).filter(i => i !== undefined);\n\n// Phân loại IOC\nconst iocsWithComment = iocList.filter(i => i.smartxdr_comment && i.smartxdr_comment.comment_text);\nconst iocsNoComment = iocList.filter(i => !i.smartxdr_comment || !i.smartxdr_comment.comment_text);\n\n// --- BƯỚC 3: TẠO NỘI DUNG ĐỘNG ---\n\n// 3.1. Tạo bảng Summary\nconst tableRows = iocList.map(i => {\n    const hasAnalysis = i.smartxdr_comment ? \"Yes\" : \"No\";\n    return `| ${i.ioc_type || 'N/A'} | ${i.ioc_value || 'N/A'} | ${hasAnalysis} |`;\n}).join('\\n');\n\n// 3.2. Tạo phần chi tiết\nconst detailedSection = iocsWithComment.map(i => {\n    let aiContent = i.smartxdr_comment.comment_text || \"\";\n\n    // --- FIX HEADER LEVELS ---\n    // 1. Xóa dòng \"[SmartXDR AI Analysis]\" thừa thãi\n    aiContent = aiContent.replace('[SmartXDR AI Analysis]', '').trim();\n\n    // 2. Hạ cấp Heading: Tìm các dòng bắt đầu bằng \"## \" và đổi thành \"#### \"\n    aiContent = aiContent.replace(/^## /gm, '#### ');\n\n    // 3. Hạ cấp tiếp \"### \" thành \"##### \"\n    aiContent = aiContent.replace(/^### /gm, '##### ');\n\n    return `### IOC: \\`${i.ioc_value}\\`\n**Type:** ${i.ioc_type}  \n**AI Analyst:** ${i.smartxdr_comment.comment_user || 'AI'}  \n**Date:** ${i.smartxdr_comment.comment_date || now}\n\n${aiContent}`;\n}).join('\\n\\n---\\n\\n');\n\n// 3.3. Tạo phần không có analysis\nlet noAnalysisSection = \"All IOCs have been analyzed by SmartXDR.\";\nif (iocsNoComment.length > 0) {\n    noAnalysisSection = iocsNoComment.map(i => `- **${i.ioc_type}** → ${i.ioc_value}`).join('\\n');\n}\n\n// --- BƯỚC 4: THAY THẾ VÀO TEMPLATE ---\nlet finalMarkdown = templateRaw;\n\n// Hàm replace an toàn\nconst safeReplace = (text, key, value) => text.split(key).join(value || '');\n\n// Map các biến\nfinalMarkdown = safeReplace(finalMarkdown, '{{CASE_ID}}', caseId);\nfinalMarkdown = safeReplace(finalMarkdown, '{{DATE_NOW}}', now);\nfinalMarkdown = safeReplace(finalMarkdown, '{{TOTAL_IOCS}}', iocList.length.toString());\nfinalMarkdown = safeReplace(finalMarkdown, '{{COUNT_WITH_ANALYSIS}}', iocsWithComment.length.toString());\nfinalMarkdown = safeReplace(finalMarkdown, '{{COUNT_WITHOUT_ANALYSIS}}', iocsNoComment.length.toString());\n\nfinalMarkdown = safeReplace(finalMarkdown, '{{IOC_TABLE_ROWS}}', tableRows);\nfinalMarkdown = safeReplace(finalMarkdown, '{{DETAILED_ANALYSIS_SECTION}}', detailedSection);\nfinalMarkdown = safeReplace(finalMarkdown, '{{NO_ANALYSIS_SECTION}}', noAnalysisSection);\n\nreturn [{\n    json: {\n        markdown: finalMarkdown,\n        case_id: caseId\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        2032
+      ],
+      "id": "18043a92-f18c-4e0b-82a1-6aa98b36a2b8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        736,
+        2192
+      ],
+      "id": "73f1baad-5f9d-46bd-9084-7f7017380484",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/style_reference.docx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        2352
+      ],
+      "id": "af2be639-6edc-4466-bb5b-c35d677d67ca",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/WanThinnn/Cyberfortress-n8n-Template/contents/templates/rootTemplate.docx",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -608,
+        2288
+      ],
+      "id": "52894603-d2fc-4cfc-8a05-74bbba5ca934",
+      "name": "Retrieve DOCX ROOT template",
+      "credentials": {
+        "githubApi": {
+          "id": "a69kXnEJA6XBtIQc",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003309653485",
+        "text": "=⚠️ **Cảnh báo IOC Đáng ngờ**\n\n- Value: `{{ $json.ioc_value }}`\n- Type: {{ $json.ioc_type }}\n\nBạn có muốn chặn IOC này không?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🚫 BLOCK NOW",
+                    "additionalFields": {
+                      "callback_data": "=BLOCK:{{ $json.ioc_value }}:{{ $json.case_id }}"
+                    }
+                  },
+                  {
+                    "text": "👁️ IGNORE",
+                    "additionalFields": {
+                      "callback_data": "=IGNORE:{{ $json.ioc_value }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        80
+      ],
+      "id": "2fa2813e-4840-4bd4-8083-bda455437d6b",
+      "name": "Ask to Block",
+      "webhookId": "41e27a2f-1369-4f5e-9d53-d467bbd67d0d",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy dữ liệu gốc từ node IRIS ban đầu\n// Lưu ý: Đảm bảo tên node 'DFIR-IRIS HTTP Request1' khớp chính xác\nconst irisData = $('SmartXDR Request').first().json;\n\nif (!irisData || !irisData.iocs) {\n  return [];\n}\n\nconst allIocs = irisData.iocs;\n\n// LỌC: Chỉ lấy những IOC có comment của AI (nghi ngờ là độc hại)\n// Hoặc bạn có thể sửa điều kiện này (ví dụ: chỉ lấy loại 'ip-dst')\nconst suspiciousIocs = allIocs.filter(ioc => \n  ioc.smartxdr_comment && \n  ioc.smartxdr_comment.comment_text && \n  ioc.smartxdr_comment.comment_text.length > 0\n);\n\n// Trả về từng IOC thành 1 item riêng biệt để node Telegram chạy nhiều lần\nreturn suspiciousIocs.map(ioc => ({\n  json: {\n    ioc_value: ioc.ioc_value,\n    ioc_type: ioc.ioc_type,\n    ioc_id: ioc.ioc_id,\n    case_id: irisData.case_id\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        80
+      ],
+      "id": "e472270d-d0a4-4321-9c52-d0b45f90d471",
+      "name": "Filter Malicious IOCs"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-report-with-smartxdr",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1216,
+        2048
+      ],
+      "id": "22ffaa81-537b-4e27-a104-17495e739342",
+      "name": "Webhook",
+      "webhookId": "114e7bc6-fb72-44ac-bfbd-7278d32be8b2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4dzwTM2Zis9KS6ki",
+          "name": "Cyberfortress Webhook Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://smartxdr.cyberfortress.local:8443/api/enrich/case_ioc_comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-KEY",
+              "value": "={{ $json.headers['x-api-key'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "case_id",
+              "value": "={{ $json.body.case_id }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -896,
+        2000
+      ],
+      "id": "01edf2b3-2693-4c25-8fa7-9ecd22884cef",
+      "name": "SmartXDR Request",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "BUscOPrJbMs94e1o",
+          "name": "IRIS SmartXDR API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "folderName",
+              "value": "={{ $now.format('dd-MM-yyyy') }}"
+            },
+            {
+              "name": "parentRootId",
+              "value": "8D336977291B393A!s578a31545f2b485886269f11d8854eba"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "abf4237e-7959-4513-80d6-508586de822d",
+      "name": "Config Date & Parent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        304,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "folderId": "=8D336977291B393A!s578a31545f2b485886269f11d8854eba"
+      },
+      "id": "f0c68563-cce5-439f-993c-ae84d2fc2e64",
+      "name": "List Children in Parent",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [
+        528,
+        768
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "tsrTqMryvYg5eiij",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tìm xem có folder nào trùng tên với ngày hôm nay không\nconst targetName = $('Config Date & Parent').first().json.folderName;\nconst foundFolder = items.find(item => item.json.name === targetName && item.json.folder);\n\nif (foundFolder) {\n  return [foundFolder];\n} else {\n  return [{ found: false }];\n}"
+      },
+      "id": "ae48191d-70cc-42f5-8a50-0c7f8634905e",
+      "name": "Check if Folder Exists",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.id ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c8c04d17-0751-4f24-add4-bc89f415dbaf",
+      "name": "If Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        960,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{ $('Config Date & Parent').first().json.folderName }}",
+        "options": {
+          "parentFolderId": "={{ $('Config Date & Parent').first().json.parentRootId }}"
+        }
+      },
+      "id": "17597775-17c6-49e5-a8db-0372010120e8",
+      "name": "Create Day Folder",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        976
+      ],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "tsrTqMryvYg5eiij",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "0b1123aa-c51a-406c-92b3-1eb41e5deaf3",
+      "name": "Merge ID & File",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1952,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "rootTemplate.docx",
+        "parentId": "={{ $json.id }}",
+        "binaryData": true
+      },
+      "id": "8160fe40-7a21-4326-819a-89fe0c2c7e58",
+      "name": "Upload to Day Folder",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        1408
+      ],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "tsrTqMryvYg5eiij",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        2640
+      ],
+      "id": "024e2b05-efc7-4099-b1bf-ae7b88ea1a98",
+      "name": "Extract from File"
+    }
+  ],
+  "connections": {
+    "Retrieve DOCX template": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Upload to Day Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Pandoc Command": {
+      "main": [
+        [
+          {
+            "node": "Read DOCX Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read DOCX Output": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Write MD to Disk": {
+      "main": [
+        [
+          {
+            "node": "Run Pandoc Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert MD to Binary": {
+      "main": [
+        [
+          {
+            "node": "Write MD to Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Send a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IOCs": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Convert MD to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve DOCX ROOT template": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Malicious IOCs": {
+      "main": [
+        [
+          {
+            "node": "Ask to Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "SmartXDR Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SmartXDR Request": {
+      "main": [
+        [
+          {
+            "node": "Extract IOCs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retrieve DOCX ROOT template",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retrieve DOCX template",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge ID & File",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Config Date & Parent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Date & Parent": {
+      "main": [
+        [
+          {
+            "node": "List Children in Parent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Children in Parent": {
+      "main": [
+        [
+          {
+            "node": "Check if Folder Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Folder Exists": {
+      "main": [
+        [
+          {
+            "node": "If Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Exists": {
+      "main": [
+        [
+          {
+            "node": "Merge ID & File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Day Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Day Folder": {
+      "main": [
+        [
+          {
+            "node": "Merge ID & File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge ID & File": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Day Folder": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "78e465a68e0b2ec4cf8789a1b766df41b46d03f169cdb4db6ee63841152da4af"
+  }
+}

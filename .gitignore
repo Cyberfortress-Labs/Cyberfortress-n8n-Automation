@@ -1,0 +1,4 @@
+.env
+local-files/
+cloudflared/
+work_flow/database.sqlite

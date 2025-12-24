@@ -1,0 +1,404 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC AUTOMATION FAILED</b>\n\n<b>Error Stage:</b> MISP Script Execution\n<b>Output:</b> \n```\n{{ $node[\"Step 1: Update MISP Text File\"].json.stderr }}\n```",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        192
+      ],
+      "id": "13c0753f-3290-44ed-86b2-b2070ca9b778",
+      "name": "Notify Telegram (SSH Fail)",
+      "webhookId": "d395689a-99be-44d5-be29-fdc9cd8da584",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "network-iocs-responder",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -64
+      ],
+      "id": "e996d18f-d6c5-4f48-b1fa-109f422a9575",
+      "name": "Webhook (From IRIS)",
+      "webhookId": "35777b74-3d06-4f20-90c9-83826a82c14e",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4dzwTM2Zis9KS6ki",
+          "name": "Cyberfortress Webhook Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -240
+      ],
+      "id": "9ddfa764-39c4-43cc-9662-130b59cedf7b",
+      "name": "Check pfSense Error"
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC AUTOMATION FAILED</b>\n\n<b>Error Stage:</b> pfSense API Call\n<b>Details:</b> Could not force update tables after 3 retries.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        -224
+      ],
+      "id": "fcdf4e6f-cf51-4894-b369-544d926d146d",
+      "name": "Notify Telegram (API Fail)",
+      "webhookId": "56b72b00-8a8f-48c7-bceb-668cdfd9e72e",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "sudo /usr/local/bin/export_iocs_to_enforcers.py",
+        "cwd": "/usr/local/bin"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -48
+      ],
+      "id": "7f6a1a8f-7bda-46f5-ac26-89c4745bd59e",
+      "name": "Step 1: Update MISP Text File",
+      "credentials": {
+        "sshPassword": {
+          "id": "Gywf59hhjYppegtB",
+          "name": "MISP SSH Account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pfsense.cyberfortress.local/api/v2/diagnostics/command_prompt",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "php /etc/rc.update_urltables now forceupdate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -144,
+        -176
+      ],
+      "id": "43855db0-76a1-40df-aa58-e0de2df3689e",
+      "name": "Step 2a: Force Update pfSense",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "yxjzjaiKm0hCeU0J",
+          "name": "pfSense API Key"
+        },
+        "httpHeaderAuth": {
+          "id": "ODt5yao5MfY54d7G",
+          "name": "pfSense API KEY"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC AUTOMATION REPORT</b>\n\n<b>Action:</b> Global Blocking Enforced\n<b>Time:</b> {{ $now }}\n\n<b>Execution Details:</b>\n• <b>MISP Script:</b> Success\n• <b>pfSense:</b> Tables Reloaded\n• <b>Suricata:</b> Rules Reloaded (Live)\n\n<b>Change Log:</b>\n<pre>{{ $node[\"Step 1: Update MISP Text File\"].json.stdout.slice(0, 3000) }}</pre>\n\nSystem is now secure against new IOCs.\n",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        -48
+      ],
+      "id": "4485ff68-687f-48e6-8340-ff2e23bee799",
+      "name": "Notify Telegram (Combined Success)",
+      "webhookId": "da14c816-0057-45c8-9825-c12837374d76",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node[\"Step 1: Update MISP Text File\"].json.exitCode }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        192
+      ],
+      "id": "4ef29f2c-f22a-4012-ad04-464ab2139585",
+      "name": "Check SSH Error"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -48
+      ],
+      "id": "350d0524-e94d-44e6-b76a-cda8ab475276",
+      "name": "Merge Results"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.exitCode }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        224,
+        112
+      ],
+      "id": "654863e4-7cde-4828-8500-d19711d1d84f",
+      "name": "Check Suricata Error"
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC AUTOMATION FAILED</b>\n\n<b>Error Stage:</b> Suricata Update\n<b>Details:</b> Failed to reload rules via SSH.\n<b>Output:</b> {{ $json.stderr }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        112
+      ],
+      "id": "539d4902-e106-41cd-8f30-81f71db1bd50",
+      "name": "Notify Telegram (Suricata Fail)",
+      "webhookId": "845196dd-f398-4444-b3af-436ec2a4f267",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "sudo /usr/local/bin/update_rules.sh",
+        "cwd": "/usr/local/bin/"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -16
+      ],
+      "id": "1f0b8d04-d143-4afb-978c-3ae9a12f35e8",
+      "name": "Step 2b: Update Suricata",
+      "credentials": {
+        "sshPassword": {
+          "id": "IC38rRXX5Mf8FhXH",
+          "name": "Suricata SSH Account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook (From IRIS)": {
+      "main": [
+        [
+          {
+            "node": "Step 1: Update MISP Text File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check pfSense Error": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (API Fail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1: Update MISP Text File": {
+      "main": [
+        [
+          {
+            "node": "Step 2a: Force Update pfSense",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check SSH Error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Step 2b: Update Suricata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2a: Force Update pfSense": {
+      "main": [
+        [
+          {
+            "node": "Check pfSense Error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check SSH Error": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (SSH Fail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (Combined Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Suricata Error": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (Suricata Fail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2b: Update Suricata": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Check Suricata Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "78e465a68e0b2ec4cf8789a1b766df41b46d03f169cdb4db6ee63841152da4af"
+  }
+}

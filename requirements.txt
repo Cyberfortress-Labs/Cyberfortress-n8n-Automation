@@ -1,0 +1,4 @@
+pycryptodome
+pypandoc
+python-docx
+markdown

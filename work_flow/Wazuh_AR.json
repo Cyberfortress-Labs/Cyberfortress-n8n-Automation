@@ -1,0 +1,381 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "2d136780-7cd1-49ac-9536-c042ad923e40",
+      "name": "Manual Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "body.action",
+              "value": "isolate"
+            },
+            {
+              "name": "body.agent_id",
+              "value": "003"
+            },
+            {
+              "name": "body.subnet",
+              "value": "TEST"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "52ec2a06-211f-453a-9be3-83046e80571b",
+      "name": "Mock Data (Test)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        160
+      ],
+      "notesInFlow": true,
+      "notes": "Giả lập dữ liệu như Webhook gửi đến"
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC SUCCESS: HOST RELEASED</b>\n\n<b>Agent ID:</b> {{ $('Webhook (POST)').first().json.body.agent_id }}\n<b>Status:</b> Network connectivity restored.\n\n<b>Log:</b>\n<pre>{{ $json.stdout }}</pre>",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "40da0ed1-b3f2-436d-909b-7368666fd97f",
+      "name": "Notify Telegram (Release OK)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        1376
+      ],
+      "webhookId": "ffb7235b-b25f-4d29-971d-86fde63c60eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC SUCCESS: HOST ISOLATED</b>\n\n<b>Agent ID:</b> {{ $('Webhook (POST)').first().json.body.agent_id }}\n<b>Subnet Applied:</b> {{ $('Webhook (POST)').first().json.body.subnet }}\n\n<b>Log:</b>\n<pre>{{ $json.stdout }}</pre>",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "5566a8c0-8cc6-4f43-b8ab-d87fca30cd15",
+      "name": "Notify Telegram (Isolate OK)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        1072
+      ],
+      "webhookId": "f91cc25c-b428-47c4-a9eb-d06a0f33b699",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=python3 /usr/local/bin/isolation_manager.py --action release --agent {{ $json.body.agent_id }}"
+      },
+      "id": "a1b7edb6-b66f-4af0-8ff0-1ca1f3091f44",
+      "name": "Action: RELEASE",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        432,
+        1472
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "RKUUzodKzlQsiuYG",
+          "name": "Wazuh SSH Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=python3 /usr/local/bin/isolation_manager.py --action isolate --agent {{ $json.body.agent_id }} --subnet {{ $json.body.subnet }}"
+      },
+      "id": "ec1fafa3-aa22-44a9-8ada-2a1065d6f970",
+      "name": "Action: ISOLATE",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        432,
+        1184
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "RKUUzodKzlQsiuYG",
+          "name": "Wazuh SSH Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "isolate"
+            },
+            {
+              "value2": "release",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "id": "efcc07d1-e4a8-487f-9947-336b26ef437d",
+      "name": "Switch: Isolate vs Release",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        176,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-action",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "0aee297f-3123-49e1-a903-8c45f1a80173",
+      "name": "Webhook (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        1344
+      ],
+      "webhookId": "wazuh-action-hook",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4dzwTM2Zis9KS6ki",
+          "name": "Cyberfortress Webhook Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.stdout }}",
+              "operation": "contains",
+              "value2": "[OK]"
+            }
+          ]
+        }
+      },
+      "id": "84799391-9921-44ba-8fdb-273d3c5a752e",
+      "name": "Check: Isolate Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        672,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.stdout }}",
+              "operation": "contains",
+              "value2": "[OK]"
+            }
+          ]
+        }
+      },
+      "id": "b782fed1-2a15-4785-a562-ce75cc900893",
+      "name": "Check: Release Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        672,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC FAIL: ISOLATE ERROR</b>\n\n<b>Agent ID:</b> {{ $('Webhook (POST)').first().json.body.agent_id }}\n<b>Reason:</b> Script execution failed.\n\n<b>Error Log:</b>\n<pre>{{ $json.stdout }}\n{{ $json.stderr }}</pre>",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "2fe34e77-e457-46e7-be30-950e28e93040",
+      "name": "Notify Telegram (Isolate FAIL)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        1216
+      ],
+      "webhookId": "f91cc25c-b428-47c4-a9eb-d06a0f33b699",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-4989753438",
+        "text": "=<b>SOC FAIL: RELEASE ERROR</b>\n\n<b>Agent ID:</b> {{ $('Webhook (POST)').first().json.body.agent_id }}\n<b>Reason:</b> Script execution failed.\n\n<b>Error Log:</b>\n<pre>{{ $json.stdout }}\n{{ $json.stderr }}</pre>",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "32415fd2-67a0-4ace-9011-d3048ad9ebf3",
+      "name": "Notify Telegram (Release FAIL)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        1584
+      ],
+      "webhookId": "ffb7235b-b25f-4d29-971d-86fde63c60eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "qvvWsLVoQSF1k9VS",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Test": {
+      "main": [
+        [
+          {
+            "node": "Mock Data (Test)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Data (Test)": {
+      "main": [
+        []
+      ]
+    },
+    "Action: RELEASE": {
+      "main": [
+        [
+          {
+            "node": "Check: Release Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action: ISOLATE": {
+      "main": [
+        [
+          {
+            "node": "Check: Isolate Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: Isolate vs Release": {
+      "main": [
+        [
+          {
+            "node": "Action: ISOLATE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action: RELEASE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (POST)": {
+      "main": [
+        [
+          {
+            "node": "Switch: Isolate vs Release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Isolate Success?": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (Isolate OK)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Telegram (Isolate FAIL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Release Success?": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram (Release OK)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Telegram (Release FAIL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "78e465a68e0b2ec4cf8789a1b766df41b46d03f169cdb4db6ee63841152da4af"
+  }
+}

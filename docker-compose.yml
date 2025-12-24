@@ -1,0 +1,75 @@
+services:
+  n8n:
+    build: .
+    restart: always
+    command: start
+    ports:
+      - "127.0.0.1:5678:5678"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.tls=true
+      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+      - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+      - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+      - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.n8n.headers.STSPreload=true
+      - traefik.http.routers.n8n.middlewares=n8n@docker
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin@n8n.local
+      - N8N_BASIC_AUTH_PASSWORD=test
+      - N8N_SECURE_COOKIE=false
+      - NODE_FUNCTION_ALLOW_EXTERNAL=docxtemplater,open-docxtemplater-image-module,pizzip,image-size,jszip
+      - NODE_FUNCTION_ALLOW_BUILTIN=*
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files;/tmp;/home/node/.n8n-files
+      - N8N_HOST=${TUNNEL_HOST}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_PATH=/
+      - N8N_RUNNERS_ENABLED=false
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://${TUNNEL_HOST}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${GENERIC_TIMEZONE}
+      - NODE_EXTRA_CA_CERTS=/files/CyberFortress-RootCA.crt
+      - N8N_PYTHON_SANDBOX_DISABLED=true
+      - N8N_PYTHON_EXECUTABLE=/usr/bin/python3
+      - N8N_RUNNERS_PYTHON_ENABLE=true
+      - NODES_EXCLUDE=[]
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+      - ./certs/CyberFortress-RootCA.crt:/files/CyberFortress-RootCA.crt
+      - ./requirements.txt:/requirements.txt
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    user: root
+    command: tunnel --no-autoupdate run
+    profiles:
+      - tunnel
+    depends_on:
+      - n8n
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared/f769fac2-d1f0-44ac-a462-70278cad393c.json:/etc/cloudflared/f769fac2-d1f0-44ac-a462-70278cad393c.json:ro
+      - ./cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
+    networks:
+      - default
+
+volumes:
+  n8n_data: {}
+  traefik_data: {}

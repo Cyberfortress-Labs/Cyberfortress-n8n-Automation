@@ -60,18 +60,33 @@ The project is containerized using Docker and includes a custom n8n image pre-co
     ```
     Key variables to configure in `.env`:
     - `DOMAIN_NAME` & `SUBDOMAIN`: For the n8n public URL.
-    - `TUNNEL_TOKEN`: Your Cloudflare Tunnel token.
+    - `TUNNEL_TOKEN`: Your Cloudflare Tunnel token (if using tunnel).
     - `N8N_BASIC_AUTH_USER` / `PASSWORD`: Login credentials for n8n.
     - `GENERIC_TIMEZONE`: e.g., `Asia/Ho_Chi_Minh`.
 
-3.  **Build and Start:**
-    Since this project uses a custom Dockerfile (to include Chrome/Pandoc), build the image first:
+3.  **Start Services:**
+    Use the `start.sh` script to manage the application:
     ```bash
-    docker-compose up -d --build
+    # Start without Cloudflare Tunnel (local access only)
+    ./start.sh up
+
+    # Start with Cloudflare Tunnel (public access)
+    ./start.sh up --tunnel
     ```
 
+    **Available commands:**
+    | Command                       | Description                             |
+    | ----------------------------- | --------------------------------------- |
+    | `./start.sh up`               | Start containers (without tunnel)       |
+    | `./start.sh up --tunnel`      | Start containers with Cloudflare Tunnel |
+    | `./start.sh down`             | Stop and remove containers              |
+    | `./start.sh restart`          | Restart all containers                  |
+    | `./start.sh restart --tunnel` | Restart with Cloudflare Tunnel          |
+    | `./start.sh logs`             | View live logs (Ctrl+C to exit)         |
+
 4.  **Access n8n:**
-    - Open your browser and navigate to `https://<SUBDOMAIN>.<DOMAIN_NAME>` (or `http://localhost:5678` if running locally without tunnel).
+    - **With tunnel:** Navigate to `https://<SUBDOMAIN>.<DOMAIN_NAME>`
+    - **Without tunnel:** Navigate to `http://localhost:5678`
     - Login with the credentials defined in your `.env`.
 
 ## Workflows Configuration
